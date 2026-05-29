@@ -45,7 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"]) && $_POST["
         $stmt = mysqli_prepare($conn,
             "INSERT INTO `order` (QRCode, Tracking, Date, otalAmount, ProofImage, PackageNumber, Status, QRimage, IsUrgen)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        mysqli_stmt_bind_param($stmt, "sssississi",
+        mysqli_stmt_bind_param($stmt,  "sssisisii",
             $qr_code, $tracking, $date, $total_amount, $proof_image, $package_num, $status, $qr_image, $is_urgent);
 
         if (mysqli_stmt_execute($stmt)) {
@@ -66,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"]) && $_POST["
                 $pharmacy_id_raw = $_POST["pharmacy_id"] ?? null;
                 if ($pharmacy_id_raw !== null && $pharmacy_id_raw !== "") {
                     $ao = mysqli_prepare($conn,
-                        "INSERT INTO asined_order (order_id, pharmacy_id, deliveryperson_id) VALUES (?, ?, '')");
+                        "INSERT INTO asined_order (order_id, pharmacy_id, deliveryperson_id) VALUES (?, ?, NULL)");
                     mysqli_stmt_bind_param($ao, "si", $tracking, $pharmacy_id);
                     mysqli_stmt_execute($ao);
                     mysqli_stmt_close($ao);
@@ -108,7 +108,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"]) && $_POST["
             mysqli_stmt_close($upd);
         } else {
             // New assignment
-            $ins = mysqli_prepare($conn, "INSERT INTO asined_order (order_id, pharmacy_id, deliveryperson_id) VALUES (?, ?, '')");
+            $ins = mysqli_prepare($conn, "INSERT INTO asined_order (order_id, pharmacy_id, deliveryperson_id) VALUES (?, ?, NULL)");
             mysqli_stmt_bind_param($ins, "si", $order_id, $pharmacy_id);
             mysqli_stmt_execute($ins);
             mysqli_stmt_close($ins);
