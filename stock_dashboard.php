@@ -591,15 +591,34 @@ body{font-family:'Inter',sans-serif;background:#f8f9fa;}
   <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
     <div class="flex items-center justify-between px-7 pt-6 pb-4 border-b border-outline-variant/10">
       <h2 class="font-extrabold text-xl text-on-surface" style="font-family:Manrope,sans-serif;">Détails de la commande</h2>
-      <button onclick="closeDetailsModal()" class="p-2 hover:bg-surface-container rounded-full transition-colors">
-        <span class="material-symbols-outlined">close</span>
-      </button>
+      <div class="flex items-center gap-2">
+        <button onclick="printOrderDetails()"
+          class="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:opacity-90 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL' 1;">print</span>
+          Imprimer
+        </button>
+        <button onclick="closeDetailsModal()" class="p-2 hover:bg-surface-container rounded-full transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
     </div>
     <div class="px-7 py-5 space-y-4" id="detailsBody">
       <!-- populated by JS -->
     </div>
   </div>
 </div>
+
+<!-- ── Hidden Print Area ──────────────────────────────────────────────────── -->
+<div id="printArea" style="display:none;"></div>
+
+<style>
+@media print {
+  body > *:not(#printOverlay) { display: none !important; }
+  #printOverlay { display: block !important; position: static !important; background: white !important; }
+  #printOverlay * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+<div id="printOverlay" style="display:none; position:fixed; inset:0; background:white; z-index:9999; padding:40px; font-family:'Inter',sans-serif;"></div>
 
 <script>
 // ── Tab switching ─────────────────────────────────────────────────────────────

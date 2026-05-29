@@ -71,10 +71,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "updat
 // ── Fetch All Orders ──────────────────────────────────────────────────────────
 $ordersResult = mysqli_query($conn,
     "SELECT o.*, a.deliveryperson_id, a.pharmacy_id AS assigned_pharmacy,
-            d.FirstName AS dp_first, d.LastName AS dp_last
+            d.FirstName AS dp_first, d.LastName AS dp_last,
+            p.FirstName AS ph_first, p.LastName AS ph_last, p.Location AS ph_loc
      FROM `order` o
      LEFT JOIN asined_order a ON o.Tracking = a.order_id
      LEFT JOIN deliveryperson d ON a.deliveryperson_id = d.PhoneNumber
+     LEFT JOIN pharmacy p ON a.pharmacy_id = p.NIF
      ORDER BY o.Date DESC"
 );
 $orders = [];
@@ -281,6 +283,7 @@ mysqli_close($conn);
               <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Amount (DZD)</th>
               <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Packages</th>
               <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Status</th>
+              <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Pharmacy</th>
               <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Assigned To</th>
               <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Urgent</th>
               <th class="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider text-on-surface-variant/70">Actions</th>
@@ -341,7 +344,24 @@ mysqli_close($conn);
                 <?php endif; ?>
               </td>
 
-              <!-- Assigned To -->
+              <!-- Pharmacy -->
+              <td class="px-5 py-4">
+                <?php if (!empty($ord["ph_first"])): ?>
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-tertiary text-base" style="font-variation-settings:'FILL' 1;">local_pharmacy</span>
+                    <div>
+                      <p class="font-semibold text-on-surface text-xs"><?php echo htmlspecialchars($ord["ph_first"] . " " . $ord["ph_last"]); ?></p>
+                      <?php if (!empty($ord["ph_loc"])): ?>
+                        <p class="text-[10px] text-on-surface-variant truncate max-w-[120px]"><?php echo htmlspecialchars($ord["ph_loc"]); ?></p>
+                      <?php endif; ?>
+                    </div>
+                  </div>
+                <?php else: ?>
+                  <span class="inline-flex items-center gap-1 text-[11px] font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">⚠ Not assigned</span>
+                <?php endif; ?>
+              </td>
+
+              <!-- Assigned To (delivery person) -->
               <td class="px-5 py-4">
                 <?php if ($isAssigned): ?>
                   <div class="flex items-center gap-2">
