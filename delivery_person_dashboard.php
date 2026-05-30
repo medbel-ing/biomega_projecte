@@ -137,6 +137,7 @@ function dataStatus($s) {
     };
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -146,6 +147,11 @@ function dataStatus($s) {
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+  const DP_PHONE    = "<?php echo $_SESSION['phone']; ?>";
+  const DP_PASSWORD = "<?php echo $_SESSION['password']; ?>";
+</script>
+<script src="delivery_gps.js"></script>
 <script>
   tailwind.config={darkMode:"class",theme:{extend:{colors:{
     "primary":"#005ea4","primary-container":"#0077ce","primary-fixed":"#d3e4ff",
