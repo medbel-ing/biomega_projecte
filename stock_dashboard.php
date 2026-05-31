@@ -139,6 +139,13 @@ while ($row = mysqli_fetch_assoc($pharm_result)) {
     $pharmacies[] = $row;
 }
 
+// ── Fetch all order items from DB (read-only, do NOT change contiti) ──────────
+$items_result = mysqli_query($conn, "SELECT ID, Name, contiti FROM orderitem ORDER BY Name ASC");
+$db_items     = [];
+while ($row = mysqli_fetch_assoc($items_result)) {
+    $db_items[] = $row;
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────────────
 $total_pending   = count($pending_orders);
 $assigned_count  = count(array_filter($pending_orders, fn($o) => !empty($o["pharmacy_id"]) || $o["pharmacy_id"] === "0"));
@@ -462,33 +469,54 @@ body{font-family:'Inter',sans-serif;background:#f8f9fa;}
 
         <div class="h-px bg-outline-variant/20"></div>
 
-        <!-- Section 2: Articles -->
+        <!-- Section 2: Articles (from DB) -->
         <div>
-          <div class="flex items-center justify-between mb-4">
-            <p class="text-xs font-bold text-outline uppercase tracking-widest flex items-center gap-2">
-              <span class="material-symbols-outlined text-sm">medication</span>Articles de la commande
-            </p>
-            <button type="button" onclick="addItem()"
-              class="flex items-center gap-1.5 text-primary text-xs font-bold hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors">
-              <span class="material-symbols-outlined text-sm">add_circle</span>Ajouter un article
-            </button>
+          <p class="text-xs font-bold text-outline uppercase tracking-widest mb-1 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">medication</span>Articles de la commande
+          </p>
+          <p class="text-xs text-on-surface-variant mb-4">Recherchez et sélectionnez les articles. La quantité en stock est affichée mais ne sera pas modifiée.</p>
+
+          <!-- Search box -->
+          <div class="relative mb-3">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+            <input type="text" id="itemSearch" placeholder="Chercher un médicament..."
+              oninput="filterItems(this.value)"
+              class="w-full pl-10 pr-4 py-3 bg-surface-container-high border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:outline-none text-on-surface"/>
           </div>
 
-          <div id="itemsContainer" class="space-y-3">
-            <!-- Initial row -->
-            <div class="item-input-row flex gap-3 items-center p-3 bg-surface-container rounded-xl">
-              <span class="material-symbols-outlined text-outline text-lg flex-shrink-0" style="font-variation-settings:'FILL' 1;">medication</span>
-              <input type="text" name="item_name[]" placeholder="Nom du médicament / article" required class="flex-1"/>
-              <div class="relative w-28 flex-shrink-0">
-                <input type="number" name="item_qty[]" placeholder="Qté" min="1" value="1" required class="w-full text-center pr-1"/>
-              </div>
-              <button type="button" onclick="removeItem(this)" class="p-1.5 hover:bg-error-container hover:text-error rounded-lg transition-colors text-on-surface-variant flex-shrink-0">
-                <span class="material-symbols-outlined text-lg">remove_circle</span>
-              </button>
+          <!-- Item list from DB -->
+          <div id="itemList" class="max-h-52 overflow-y-auto rounded-xl border border-outline-variant/20 divide-y divide-outline-variant/10 mb-4">
+            <?php if (empty($db_items)): ?>
+            <div class="px-4 py-6 text-center text-sm text-on-surface-variant">
+              Aucun article dans la base de données.
             </div>
+            <?php else: foreach ($db_items as $it): ?>
+            <div class="item-db-row flex items-center justify-between px-4 py-3 hover:bg-primary/5 cursor-pointer transition-colors"
+                 data-name="<?php echo htmlspecialchars(strtolower($it['Name'])); ?>"
+                 onclick="selectItem(<?php echo (int)$it['ID']; ?>, '<?php echo htmlspecialchars(addslashes($it['Name'])); ?>', <?php echo (int)$it['contiti']; ?>)">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary text-base" style="font-variation-settings:'FILL' 1;">medication</span>
+                <span class="text-sm font-semibold text-on-surface"><?php echo htmlspecialchars($it['Name']); ?></span>
+              </div>
+              <span class="text-xs font-bold text-on-surface-variant bg-surface-container px-2.5 py-1 rounded-full">
+                Stock: <?php echo (int)$it['contiti']; ?>
+              </span>
+            </div>
+            <?php endforeach; endif; ?>
           </div>
 
-          <p class="text-xs text-on-surface-variant mt-2 ml-1">Ajoutez tous les médicaments inclus dans cette commande.</p>
+          <!-- Selected items (chips + hidden inputs) -->
+          <div>
+            <p class="text-xs font-bold text-on-surface-variant mb-2 flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">check_circle</span>
+              Articles sélectionnés : <span id="selectedCount" class="text-primary ml-1">0</span>
+            </p>
+            <div id="selectedItems" class="flex flex-wrap gap-2 min-h-[40px]">
+              <p id="noItemMsg" class="text-xs text-outline italic">Aucun article sélectionné. Cliquez sur un article ci-dessus.</p>
+            </div>
+            <!-- Hidden inputs submitted with form -->
+            <div id="hiddenItemInputs"></div>
+          </div>
         </div>
 
         <div class="h-px bg-outline-variant/20"></div>
@@ -629,25 +657,91 @@ function switchTab(tab) {
   document.getElementById("tab-create-btn").classList.toggle("active", tab === "create");
 }
 
-// ── Dynamic item rows ─────────────────────────────────────────────────────────
-function addItem() {
-  const container = document.getElementById("itemsContainer");
-  const div = document.createElement("div");
-  div.className = "item-input-row flex gap-3 items-center p-3 bg-surface-container rounded-xl";
-  div.innerHTML = `
-    <span class="material-symbols-outlined text-outline text-lg flex-shrink-0" style="font-variation-settings:'FILL' 1;">medication</span>
-    <input type="text" name="item_name[]" placeholder="Nom du médicament / article" required class="flex-1"/>
-    <div class="relative w-28 flex-shrink-0">
-      <input type="number" name="item_qty[]" placeholder="Qté" min="1" value="1" required class="w-full text-center"/>
-    </div>
-    <button type="button" onclick="removeItem(this)" class="p-1.5 hover:bg-error-container hover:text-error rounded-lg transition-colors text-on-surface-variant flex-shrink-0">
-      <span class="material-symbols-outlined text-lg">remove_circle</span>
-    </button>`;
-  container.appendChild(div);
+// ── Dynamic item selector from DB ─────────────────────────────────────────────
+const selectedItems = {}; // { id: { name, contiti } }
+
+function filterItems(query) {
+  const q = query.toLowerCase().trim();
+  document.querySelectorAll('.item-db-row').forEach(row => {
+    row.style.display = (!q || row.dataset.name.includes(q)) ? '' : 'none';
+  });
 }
-function removeItem(btn) {
-  const rows = document.querySelectorAll(".item-input-row");
-  if (rows.length > 1) btn.closest(".item-input-row").remove();
+
+function selectItem(id, name, contiti) {
+  if (selectedItems[id]) return; // already selected
+  selectedItems[id] = { name, contiti, qty: contiti }; // qty starts at contiti value
+  renderSelected();
+}
+
+function deselectItem(id) {
+  delete selectedItems[id];
+  renderSelected();
+}
+
+function updateQty(id, val) {
+  if (selectedItems[id]) selectedItems[id].qty = Math.max(1, parseInt(val) || 1);
+  // update hidden input directly
+  const inp = document.getElementById('qty-hidden-' + id);
+  if (inp) inp.value = selectedItems[id].qty;
+}
+
+function renderSelected() {
+  const chips   = document.getElementById('selectedItems');
+  const hidden  = document.getElementById('hiddenItemInputs');
+  const count   = document.getElementById('selectedCount');
+  const noMsg   = document.getElementById('noItemMsg');
+  const ids     = Object.keys(selectedItems);
+
+  count.textContent = ids.length;
+
+  // Clear only the chips (not noItemMsg)
+  Array.from(chips.children).forEach(child => {
+    if (child.id !== 'noItemMsg') child.remove();
+  });
+
+  if (ids.length === 0) {
+    noMsg.style.display = '';
+  } else {
+    noMsg.style.display = 'none';
+    ids.forEach(id => {
+      const it  = selectedItems[id];
+      const div = document.createElement('div');
+      div.id    = 'chip-' + id;
+      div.className = 'flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-2 rounded-xl text-xs font-bold';
+      div.innerHTML = `
+        <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 1;">medication</span>
+        <span class="text-primary">${it.name}</span>
+        <div class="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-primary/20">
+          <span class="text-[10px] text-on-surface-variant font-semibold">Qté:</span>
+          <input type="number" min="1" value="${it.qty}"
+            onchange="updateQty(${id}, this.value)"
+            oninput="updateQty(${id}, this.value)"
+            class="w-12 text-center text-sm font-bold text-primary border-none outline-none bg-transparent"/>
+        </div>
+        <button type="button" onclick="deselectItem(${id})"
+          class="ml-1 text-on-surface-variant hover:text-error transition-colors">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>`;
+      chips.appendChild(div);
+    });
+  }
+
+  // Rebuild hidden inputs
+  hidden.innerHTML = ids.map(id => {
+    const it = selectedItems[id];
+    return `<input type="hidden" name="item_name[]" value="${it.name}"/>
+            <input type="hidden" name="item_qty[]" id="qty-hidden-${id}" value="${it.qty}"/>`;
+  }).join('');
+
+  // Highlight selected rows in the list
+  document.querySelectorAll('.item-db-row').forEach(row => {
+    const rowId = row.getAttribute('onclick').match(/selectItem\((\d+)/)?.[1];
+    if (rowId && selectedItems[rowId]) {
+      row.classList.add('bg-primary/8', 'border-l-4', 'border-primary');
+    } else {
+      row.classList.remove('bg-primary/8', 'border-l-4', 'border-primary');
+    }
+  });
 }
 
 // ── Assign modal ──────────────────────────────────────────────────────────────
@@ -724,6 +818,18 @@ document.getElementById("detailsModal").addEventListener("click", function(e){
 
 // Auto-switch to create tab if redirected with ?tab=create
 if (new URLSearchParams(location.search).get("tab") === "create") switchTab("create");
+
+// ── Validate at least 1 item selected before submit ───────────────────────────
+document.querySelector('form[action="stock_dashboard.php"]')?.addEventListener('submit', function(e) {
+  if (Object.keys(selectedItems).length === 0) {
+    e.preventDefault();
+    const msg = document.createElement('div');
+    msg.className = 'flex items-center gap-3 bg-error-container text-on-error-container border border-error/20 px-5 py-3 rounded-xl text-sm font-semibold mt-4';
+    msg.innerHTML = '<span class="material-symbols-outlined">error</span> Veuillez sélectionner au moins un article.';
+    this.prepend(msg);
+    setTimeout(() => msg.remove(), 3500);
+  }
+});
 </script>
 </body>
 </html>

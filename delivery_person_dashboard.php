@@ -82,8 +82,9 @@ $sql = "
         p.PhoneNumber      AS pharm_phone,
         p.Location         AS pharm_location
     FROM asined_order ao
-    LEFT JOIN `order`  o ON ao.order_id    = o.Tracking
-    LEFT JOIN pharmacy p ON ao.pharmacy_id = p.NIF
+    LEFT JOIN `order`  o ON ao.order_id      = o.Tracking
+    LEFT JOIN pharmacy p ON p.PhoneNumber    = ao.pharmacy_id
+                         OR CAST(p.NIF AS CHAR) = ao.pharmacy_id
     WHERE ao.deliveryperson_id = '$phone_esc'
     ORDER BY o.IsUrgen DESC, o.Status ASC, o.Date DESC
 ";
@@ -95,25 +96,33 @@ if ($result) {
 
 $total       = count($orders);
 $en_attente  = count(array_filter($orders, fn($o) => (int)$o["status"] === 0));
+$en_transit  = count(array_filter($orders, fn($o) => (int)$o["status"] === 2));
 $livres      = count(array_filter($orders, fn($o) => (int)$o["status"] === 1));
 $non_livres  = count(array_filter($orders, fn($o) => (int)$o["status"] === 3));
 $urgent      = count(array_filter($orders, fn($o) => (int)$o["urgent"] === 1));
 
 $conn->close();
 
-// Status helpers — 0=En attente, 1=Livré, 3=Non livré
+// Status values from DB:
+//   0 = En attente (pending)
+//   1 = Livré (delivered)
+//   2 = En transit (in transit - intermediate state)
+//   3 = Non livré (not delivered)
+
 function statusLabel($s) {
     return match((int)$s) {
         0 => "En attente",
         1 => "Livré",
+        2 => "En transit",
         3 => "Non livré",
-        default => "Inconnu"
+        default => "En attente"
     };
 }
 function statusBg($s) {
     return match((int)$s) {
         0 => "bg-secondary-container text-on-secondary-container",
         1 => "bg-green-100 text-green-700",
+        2 => "bg-blue-100 text-blue-700",
         3 => "bg-error-container text-error",
         default => "bg-surface-container text-on-surface-variant"
     };
@@ -121,17 +130,17 @@ function statusBg($s) {
 function statusIcon($s) {
     return match((int)$s) {
         0 => "pending",
-        1 => "local_shipping",
-        0 => "pending",
         1 => "check_circle",
+        2 => "local_shipping",
         3 => "cancel",
-        default => "help"
+        default => "pending"
     };
 }
 function dataStatus($s) {
     return match((int)$s) {
         0 => "attente",
         1 => "livre",
+        2 => "transit",
         3 => "nonlivre",
         default => "attente"
     };
@@ -260,6 +269,10 @@ function dataStatus($s) {
     <button onclick="filterOrders('attente')"  class="tab-btn flex-1 px-3 py-2 rounded-xl text-xs font-semibold text-on-surface-variant transition-all whitespace-nowrap" id="tab-attente">
       ⏳ En attente (<?php echo $en_attente; ?>)
     </button>
+    <button onclick="filterOrders('transit')"  class="tab-btn flex-1 px-3 py-2 rounded-xl text-xs font-semibold text-on-surface-variant transition-all whitespace-nowrap" id="tab-transit">
+      🚚 En transit (<?php echo $en_transit; ?>)
+    </button>
+    <button onclick="filterOrders('livre')"    class="tab-btn flex-1 px-3 py-2 rounded-xl text-xs font-semibold text-on-surface-variant transition-all whitespace-nowrap" id="tab-livre">
       ✓ Livrées (<?php echo $livres; ?>)
     </button>
     <button onclick="filterOrders('nonlivre')" class="tab-btn flex-1 px-3 py-2 rounded-xl text-xs font-semibold text-on-surface-variant transition-all whitespace-nowrap" id="tab-nonlivre">
@@ -287,12 +300,11 @@ function dataStatus($s) {
          data-status="<?php echo dataStatus($st); ?>"
          style="animation:fadeUp .35s ease <?php echo $i*.06; ?>s both;">
 
-      <!-- Card top bar (status color) -->
       <div class="h-1 w-full <?php
         echo match($st) {
           0 => 'bg-secondary-container',
-          1 => 'bg-blue-400',
-          2 => 'bg-green-400',
+          1 => 'bg-green-400',
+          2 => 'bg-blue-400',
           3 => 'bg-error',
           default => 'bg-outline-variant'
         };

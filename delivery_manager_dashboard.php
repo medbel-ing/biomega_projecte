@@ -203,6 +203,10 @@ mysqli_close($conn);
          class="text-slate-600 hover:bg-slate-100 flex items-center gap-3 px-3 py-2.5 rounded-lg hover:translate-x-1 transition-transform">
         <span class="material-symbols-outlined">local_shipping</span><span class="text-sm">Delivery Persons</span>
       </a>
+      <a href="deliverymanager_tracking.php"
+         class="text-slate-600 hover:bg-slate-100 flex items-center gap-3 px-3 py-2.5 rounded-lg hover:translate-x-1 transition-transform">
+        <span class="material-symbols-outlined">location_on</span><span class="text-sm">Live Tracking</span>
+      </a>
       <a href="logout.php"
          class="text-red-500 hover:bg-red-50 flex items-center gap-3 px-3 py-2.5 rounded-lg hover:translate-x-1 transition-transform mt-2">
         <span class="material-symbols-outlined">logout</span><span class="text-sm font-bold">Logout</span>
@@ -214,9 +218,17 @@ mysqli_close($conn);
   <main class="flex-1 lg:ml-64 p-4 lg:p-8 space-y-8 bg-surface">
 
     <!-- Page title -->
-    <div class="fade-in">
-      <h1 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Dashboard</h1>
-      <p class="text-on-surface-variant font-medium mt-1">Manage orders and delivery assignments.</p>
+    <div class="fade-in flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h1 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Dashboard</h1>
+        <p class="text-on-surface-variant font-medium mt-1">Manage orders and delivery assignments.</p>
+      </div>
+      <a href="deliverymanager_tracking.php"
+         class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-bold text-sm rounded-xl
+                hover:bg-primary/90 active:scale-95 transition-all shadow-sm shadow-primary/20 self-start">
+        <span class="material-symbols-outlined text-lg">location_on</span>
+        Live Tracking
+      </a>
     </div>
 
     <!-- Alerts -->
@@ -540,5 +552,25 @@ mysqli_close($conn);
     });
   }
 </script>
+
+<!-- Mobile Bottom Nav -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+  <a href="delivery_manager_dashboard.php" class="flex flex-col items-center bg-blue-100 text-blue-800 rounded-xl px-3 py-1.5">
+    <span class="material-symbols-outlined">grid_view</span>
+    <span class="text-[10px] font-semibold uppercase">Dashboard</span>
+  </a>
+  <a href="#orders-section" class="flex flex-col items-center text-slate-400">
+    <span class="material-symbols-outlined">package_2</span>
+    <span class="text-[10px] font-semibold uppercase">Orders</span>
+  </a>
+  <a href="deliverymanager_tracking.php" class="flex flex-col items-center text-slate-400">
+    <span class="material-symbols-outlined">location_on</span>
+    <span class="text-[10px] font-semibold uppercase">Tracking</span>
+  </a>
+  <a href="logout.php" class="flex flex-col items-center text-slate-400">
+    <span class="material-symbols-outlined">logout</span>
+    <span class="text-[10px] font-semibold uppercase">Logout</span>
+  </a>
+</nav>
 </body>
 </html>
